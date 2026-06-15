@@ -1,13 +1,68 @@
-import React from 'react'
+import React, { useState, useRef } from 'react'
 import "../style/home.scss"
+import { useInterview } from '../hooks/useInterview.js'
+import { useNavigate } from 'react-router'
+import { logout } from "../../auth/services/auth.api.js";
 const Home = () => {
-  return (
-     <div className='home-page'>
+
+    const { loading, generateReport,reports } = useInterview()
+    const [ jobDescription, setJobDescription ] = useState("")
+    const [ selfDescription, setSelfDescription ] = useState("")
+    const [resumeUploaded, setResumeUploaded] = useState(false);
+    const resumeInputRef = useRef()
+
+    const navigate = useNavigate()
+
+    const handleGenerateReport = async () => {
+        const resumeFile = resumeInputRef.current.files[ 0 ]
+        const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+        navigate(`/interview/${data._id}`)
+    }
+
+    const handleLogout = async () => {
+        const confirmed = window.confirm("Are you sure you want to logout?");
+
+        if (!confirmed) return;
+
+        try {
+            await logout();
+            navigate("/login", { replace: true });
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    if (loading) {
+        return (
+            <main className='loading-screen'>
+                <h1>Loading your interview plan...</h1>
+            </main>
+        )
+    }
+
+    return (
+        <div className='home-page'>
 
             {/* Page Header */}
             <header className='page-header'>
-                <h1>Create Your Custom <span className='highlight'>Interview Plan</span></h1>
-                <p>Let our AI analyze the job requirements and your unique profile to build a winning strategy.</p>
+                <div className='header-top'>
+                    <div>
+                        <h1>
+                            Create Your Custom <span className='highlight'>Interview Plan</span>
+                        </h1>
+                        <p>
+                            Let our AI analyze the job requirements and your unique profile
+                            to build a winning strategy.
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={handleLogout}
+                        className='logout-btn'
+                    >
+                        Logout
+                    </button>
+                </div>
             </header>
 
             {/* Main Card */}
@@ -24,7 +79,7 @@ const Home = () => {
                             <span className='badge badge--required'>Required</span>
                         </div>
                         <textarea
-                            // onChange={(e) => { setJobDescription(e.target.value) }}
+                            onChange={(e) => { setJobDescription(e.target.value) }}
                             className='panel__textarea'
                             placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
                             maxLength={5000}
@@ -52,11 +107,35 @@ const Home = () => {
                             </label>
                             <label className='dropzone' htmlFor='resume'>
                                 <span className='dropzone__icon'>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
+                                    {resumeUploaded ? (
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                                        >
+                                            <path d="M20 6L9 17l-5-5" />
+                                        </svg>
+                                    ) : (
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                        >
+                                            <polyline points="16 16 12 12 8 16" />
+                                            <line x1="12" y1="12" x2="12" y2="21" />
+                                            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                                        </svg>
+                                    )}
                                 </span>
-                                <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
-                                <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
-                                <input /*ref={resumeInputRef}*/ hidden type='file' id='resume' name='resume' accept='.pdf,.docx' />
+
+                                    <p className='dropzone__title'>
+                                        {resumeUploaded
+                                            ? "Resume Uploaded Successfully"
+                                            : "Click to upload or drag & drop"}
+                                    </p>
+
+                                    <p className='dropzone__subtitle'>
+                                        {resumeUploaded
+                                            ? "✓ File selected"
+                                            : "PDF or DOCX (Max 5MB)"}
+                                    </p>
+                                <input ref={resumeInputRef} onChange={(e) => {if (e.target.files[0]) {setResumeUploaded(true);}}} hidden type='file' id='resume' name='resume' accept='.pdf,.docx' />
                             </label>
                         </div>
 
@@ -67,7 +146,7 @@ const Home = () => {
                         <div className='self-description'>
                             <label className='section-label' htmlFor='selfDescription'>Quick Self-Description</label>
                             <textarea
-                                // onChange={(e) => { setSelfDescription(e.target.value) }}
+                                onChange={(e) => { setSelfDescription(e.target.value) }}
                                 id='selfDescription'
                                 name='selfDescription'
                                 className='panel__textarea panel__textarea--short'
@@ -89,7 +168,7 @@ const Home = () => {
                 <div className='interview-card__footer'>
                     <span className='footer-info'>AI-Powered Strategy Generation &bull; Approx 30s</span>
                     <button
-                        // onClick={handleGenerateReport}
+                        onClick={handleGenerateReport}
                         className='generate-btn'>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
                         Generate My Interview Strategy
@@ -97,7 +176,7 @@ const Home = () => {
                 </div>
             </div>
 
-            {/* Recent Reports List
+            {/* Recent Reports List */}
             {reports.length > 0 && (
                 <section className='recent-reports'>
                     <h2>My Recent Interview Plans</h2>
@@ -111,7 +190,7 @@ const Home = () => {
                         ))}
                     </ul>
                 </section>
-            )} */}
+            )}
 
             {/* Page Footer */}
             <footer className='page-footer'>
